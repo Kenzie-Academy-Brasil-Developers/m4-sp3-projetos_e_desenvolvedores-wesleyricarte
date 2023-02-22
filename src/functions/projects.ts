@@ -63,15 +63,15 @@ export const listProject = async (
 
 	const queryString: string = `
     SELECT 
-        pj."id" AS "projectId", pj."name", pj."description", pj."estimatedTime", pj."repository", pj."startDate", pj."endDate",
+        pj."id" AS "projectId", pj."name", pj."description", pj."estimatedTime", pj."repository", pj."startDate", pj."endDate", pj."developerId",
         pt."addedIn" AS "techAddedIn",
         string_agg(CAST(pt."technologyId" AS TEXT), ', ') AS "technologyIds",
         string_agg(te."name", ', ') AS "technologyNames"
     FROM
         projects pj
-    JOIN
+    LEFT JOIN
         projects_technologies pt ON pj."id" = pt."projectId"
-    JOIN
+    LEFT JOIN
         technologies te ON pt."technologyId" = te."id"
     WHERE
         pj."id" = $1
@@ -95,7 +95,7 @@ export const listAllProjects = async (
 ): Promise<Response> => {
 	const queryString: string = `
     SELECT 
-        pj."id" AS "projectId", pj."name", pj."description", pj."estimatedTime", pj."repository", pj."startDate", pj."endDate",
+        pj."id" AS "projectId", pj."name", pj."description", pj."estimatedTime", pj."repository", pj."startDate", pj."endDate", pj."developerId",
         pt."addedIn" AS "techAddedIn",
         string_agg(CAST(pt."technologyId" AS TEXT), ', ') AS "technologyIds",
         string_agg(te."name", ', ') AS "technologyNames"
@@ -130,7 +130,7 @@ export const deleteProject = async (
 	return res.status(204);
 };
 
-// POST
+// POST--
 export const createProjectTechnology = async (
 	req: Request,
 	res: Response

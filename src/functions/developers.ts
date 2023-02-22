@@ -97,11 +97,11 @@ export const listDeveloperProjects = async (
 
 	const queryResult: QueryResult = await client.query(queryConfig);
 
-    if (!queryResult.rowCount) {
-        return res.status(404).json({
-            message: `This developer doesn't have projects!`
-        })
-    }
+	if (!queryResult.rowCount) {
+		return res.status(404).json({
+			message: `This developer doesn't have projects!`,
+		});
+	}
 
 	return res.status(200).json(queryResult.rows);
 };
@@ -133,12 +133,35 @@ export const updateDeveloper = async (
 	return res.status(200);
 };
 
-// DELETE
+// DELETE--
 export const deleteDeveloper = async (
 	req: Request,
 	res: Response
 ): Promise<Response> => {
-	return res.status(204);
+	const { id: devId } = req.params;
+
+	const queryString: string = `
+	WITH deleted_projects_technologies AS (
+	    DELETE FROM "projects_technologies"
+	    WHERE "projectId" IN (
+	        SELECT "id" FROM "projects" WHERE "developerId" = $1
+	    )RETURNING *
+	),
+	deleted_projects AS (DELETE FROM "projects" WHERE "developerId" = $2 RETURNING *),
+	deleted_developer_info AS (
+		DELETE FROM "developer_infos" WHERE "id" = (
+			SELECT "developerInfoId" FROM "developers" WHERE "id" = $3)
+		RETURNING *)
+	DELETE FROM "developers" WHERE "id" = $4;`;
+
+	const queryConfig: QueryConfig = {
+		text: queryString,
+		values: [devId, devId, devId, devId],
+	};
+
+	await client.query(queryConfig);
+
+	return res.status(204).send();
 };
 
 // POST--
