@@ -4,7 +4,6 @@ import format from 'pg-format';
 import { client } from '../database';
 import { iDeveloperDataRequest, iDeveloperInfosRequest } from '../interfaces';
 
-// POST--
 export const createDeveloper = async (
 	req: Request,
 	res: Response
@@ -32,7 +31,6 @@ export const createDeveloper = async (
 	return res.status(201).json(queryResult.rows[0]);
 };
 
-// GET--
 export const listDeveloper = async (
 	req: Request,
 	res: Response
@@ -60,7 +58,6 @@ export const listDeveloper = async (
 	return res.status(200).json(queryResult.rows[0]);
 };
 
-// GET--
 export const listDeveloperProjects = async (
 	req: Request,
 	res: Response
@@ -106,7 +103,6 @@ export const listDeveloperProjects = async (
 	return res.status(200).json(queryResult.rows);
 };
 
-// GET--
 export const listAllDevelopers = async (
 	req: Request,
 	res: Response
@@ -125,15 +121,35 @@ export const listAllDevelopers = async (
 	return res.status(200).json(queryResult.rows);
 };
 
-// PATCH
 export const updateDeveloper = async (
 	req: Request,
 	res: Response
 ): Promise<Response> => {
-	return res.status(200);
+	const { id: devId } = req.params;
+	const { name, email } = req.body;
+
+	if (typeof email === 'string') {
+		return res.status(400).json({
+			message: `Email conflict! Email key isn't allowed to update.`,
+		});
+	}
+
+	if (typeof name !== 'string') {
+		return res.status(400).json({
+			message: `The key 'name' is required!`,
+		});
+	}
+
+	const queryConfig: QueryConfig = {
+		text: `UPDATE developers SET "name" = $1 WHERE "id" = $2 RETURNING *;`,
+		values: [name, devId],
+	};
+
+	const queryResult: QueryResult = await client.query(queryConfig);
+
+	return res.status(200).json(queryResult.rows[0]);
 };
 
-// DELETE--
 export const deleteDeveloper = async (
 	req: Request,
 	res: Response
@@ -164,7 +180,6 @@ export const deleteDeveloper = async (
 	return res.status(204).send();
 };
 
-// POST--
 export const createDeveloperInfo = async (
 	req: Request,
 	res: Response
@@ -209,8 +224,6 @@ export const createDeveloperInfo = async (
 
 	const developerInfoData = queryResult.rows[0];
 
-	console.log(developerInfoData);
-
 	queryString = `UPDATE developers SET "developerInfoId" = ${devInfoId} WHERE id = ${devId} RETURNING *`;
 
 	queryResult = await client.query(queryString);
@@ -224,10 +237,51 @@ export const createDeveloperInfo = async (
 	return res.status(201).json(queryResultString.rows[0]);
 };
 
-// PATCH
 export const updateDeveloperInfo = async (
 	req: Request,
 	res: Response
 ): Promise<Response> => {
-	return res.status(200);
+	const { id: devId } = req.params;
+	const { preferredOS } = req.body;
+
+	if (
+		preferredOS !== 'Linux' &&
+		preferredOS !== 'Windows' &&
+		preferredOS !== 'MacOS'
+	) {
+		return res.status(400).json({
+			message:
+				'Acceptable values for key preferredOS are: Windows, Linux and MacOS!',
+		});
+	}
+
+	if (typeof preferredOS !== 'string') {
+		return res.status(400).json({
+			message: 'preferredOS is a required key!',
+		});
+	}
+
+	const queryConfig: QueryConfig = {
+		text: `SELECT * FROM developer_infos di JOIN developers dv ON dv."developerInfoId" = di."id" WHERE dv.id = $1;`,
+		values: [devId],
+	};
+
+	const result: QueryResult = await client.query(queryConfig);
+
+	if (!result.rowCount) {
+		return res.status(400).json({
+			message: `This developer doesn't have extra information registered!`,
+		});
+	}
+
+	const devInfoId = result.rows[0].id;
+
+	const queryString: QueryConfig = {
+		text: `UPDATE developer_infos SET "preferredOS" = $1 WHERE "id" = $2 RETURNING *;`,
+		values: [preferredOS, devInfoId],
+	};
+
+	const queryResult = await client.query(queryString);
+
+	return res.status(200).json(queryResult.rows[0]);
 };

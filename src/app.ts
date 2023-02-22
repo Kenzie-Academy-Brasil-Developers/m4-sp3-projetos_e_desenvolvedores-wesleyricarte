@@ -1,25 +1,10 @@
 import express, { Application } from 'express';
 import { startDatabase } from './database';
-import {
-	createDeveloper,
-	createDeveloperInfo,
-	deleteDeveloper,
-	listAllDevelopers,
-	listDeveloper,
-	listDeveloperProjects,
-	updateDeveloper,
-	updateDeveloperInfo,
+import { createDeveloper, createDeveloperInfo, deleteDeveloper, listAllDevelopers, listDeveloper, listDeveloperProjects, updateDeveloper, updateDeveloperInfo,
 } from './functions/developers';
-import {
-	createProject,
-	createProjectTechnology,
-	deleteProject,
-	deleteProjectTechnology,
-	listAllProjects,
-	listProject,
-	updateProject,
+import { createProject,	createProjectTechnology,	deleteProject, deleteProjectTechnology, listAllProjects,listProject,updateProject,
 } from './functions/projects';
-import { verifyDeveloperExists, ensureDeveloperExists, ensureProjectExists, verifyDeveloperInfoExists, ensureDeveloperIdExists, verifyTechnologyExists } from './middlewares';
+import { verifyDeveloperExists, ensureDeveloperExists, ensureProjectExists, verifyDeveloperInfoExists, ensureDeveloperIdExists, verifyTechnologyExists, ensureTechnologyExists } from './middlewares';
 
 const app: Application = express();
 app.use(express.json());
@@ -49,7 +34,7 @@ app.patch('/projects/:id', ensureProjectExists, updateProject);
 app.delete('/projects/:id', ensureProjectExists, deleteProject);
 
 app.post('/projects/:id/technologies', verifyTechnologyExists, ensureProjectExists, createProjectTechnology);
-app.delete('/projects/:id/technologies/:name', ensureProjectExists, deleteProjectTechnology);
+app.delete('/projects/:id/technologies/:name', ensureProjectExists, ensureTechnologyExists, deleteProjectTechnology);
 
 // APP LISTEN:
 

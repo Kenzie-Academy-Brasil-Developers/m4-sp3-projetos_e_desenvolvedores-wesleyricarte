@@ -158,3 +158,35 @@ export const verifyTechnologyExists = async (
     
 	return next();
 };
+
+export const ensureTechnologyExists = async (
+	req: Request,
+	res: Response,
+	next: NextFunction
+): Promise<Response | void> => {
+	const { name } = req.params;
+
+	if (!name) {
+		return res.status(400).json({
+			message:
+				'The route name is required! Remember that the tecnologies accepted are JavaScript, Python, React, Express.js, HTML, CSS, Django, PostgreSQL and MongoDB.',
+		});
+	}
+
+    const queryString: string = `SELECT * FROM technologies WHERE "name" = $1;`
+
+    const queryConfig: QueryConfig = {
+        text: queryString,
+        values: [name]
+    }
+
+    const queryResult: QueryResult = await client.query(queryConfig)
+
+    if (!queryResult.rows[0]) {
+        return res.status(400).json({
+            message: 'The tecnologies accepted are JavaScript, Python, React, Express.js, HTML, CSS, Django, PostgreSQL and MongoDB.'
+        })
+    }
+
+	return next();
+};

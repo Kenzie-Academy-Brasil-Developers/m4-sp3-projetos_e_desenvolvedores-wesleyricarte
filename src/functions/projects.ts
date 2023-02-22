@@ -4,7 +4,6 @@ import format from 'pg-format';
 import { client } from '../database';
 import { iProjectDataRequest } from '../interfaces';
 
-// POST--
 export const createProject = async (
 	req: Request,
 	res: Response
@@ -54,7 +53,6 @@ export const createProject = async (
 	return res.status(201).json(queryResult.rows[0]);
 };
 
-// GET--
 export const listProject = async (
 	req: Request,
 	res: Response
@@ -88,7 +86,6 @@ export const listProject = async (
 	return res.status(200).json(queryResult.rows[0]);
 };
 
-// GET--
 export const listAllProjects = async (
 	req: Request,
 	res: Response
@@ -119,18 +116,49 @@ export const updateProject = async (
 	req: Request,
 	res: Response
 ): Promise<Response> => {
-	return res.status(200);
+	const { id: projectId } = req.params;
+	const { estimatedTime, endDate } = req.body;
+	const updateDeveloperData = { estimatedTime, endDate };
+
+	if (typeof estimatedTime !== 'string' && typeof endDate !== 'string') {
+		return res.status(400).json({
+			message: `Updatable keys are 'estimatedTime' and 'endDate'!`,
+		});
+	}
+
+	const queryString: string = format(
+		`UPDATE projects SET (%I) = ROW(%L) WHERE id = $1 RETURNING *;`,
+		Object.keys(updateDeveloperData),
+		Object.values(updateDeveloperData)
+	);
+
+	const queryConfig: QueryConfig = {
+		text: queryString,
+		values: [projectId],
+	};
+
+	const queryResult: QueryResult = await client.query(queryConfig);
+
+	return res.status(200).json(queryResult.rows[0]);
 };
 
-// DELETE
 export const deleteProject = async (
 	req: Request,
 	res: Response
 ): Promise<Response> => {
-	return res.status(204);
+	const { id: projectId } = req.params;
+
+	let queryString: string = `DELETE FROM projects_technologies WHERE "projectId" = ${projectId}`;
+
+	await client.query(queryString);
+
+	queryString = `DELETE FROM projects WHERE "id" = ${projectId}`;
+
+	await client.query(queryString);
+
+	return res.status(204).send();
 };
 
-// POST--
 export const createProjectTechnology = async (
 	req: Request,
 	res: Response
@@ -149,16 +177,16 @@ export const createProjectTechnology = async (
 
 	const techId = queryResult.rows[0].id;
 
-    queryString = `INSERT INTO projects_technologies ("addedIn", "projectId", "technologyId") VALUES (NOW(), $1, $2)`
+	queryString = `INSERT INTO projects_technologies ("addedIn", "projectId", "technologyId") VALUES (NOW(), $1, $2)`;
 
-    queryConfig = {
-        text: queryString,
-        values: [projectId, techId]
-    }
+	queryConfig = {
+		text: queryString,
+		values: [projectId, techId],
+	};
 
-    await client.query(queryConfig)
+	await client.query(queryConfig);
 
-    queryString = `
+	queryString = `
     SELECT 
         pj."id" AS "projectId", pj."name", pj."description", pj."estimatedTime", pj."repository", pj."startDate", pj."endDate",
         pt."addedIn" AS "techAddedIn",
@@ -176,20 +204,51 @@ export const createProjectTechnology = async (
         pj."id", pt."addedIn";  
     `;
 
-    queryConfig = {
+	queryConfig = {
 		text: queryString,
 		values: [projectId],
 	};
 
-    queryResult = await client.query(queryConfig)
+	queryResult = await client.query(queryConfig);
 
 	return res.status(201).json(queryResult.rows[0]);
 };
 
-// DELETE
 export const deleteProjectTechnology = async (
 	req: Request,
 	res: Response
 ): Promise<Response> => {
-	return res.status(204);
+	const { id: projectId, name: techName } = req.params;
+
+	let queryConfig: QueryConfig = {
+		text: `SELECT * FROM technologies WHERE "name" = $1;`,
+		values: [techName],
+	};
+
+	let queryResult: QueryResult = await client.query(queryConfig);
+
+	const techId = queryResult.rows[0].id;
+
+	queryConfig = {
+		text: `SELECT * FROM projects_technologies WHERE "technologyId" = $1`,
+		values: [techId],
+	};
+
+	queryResult = await client.query(queryConfig);
+
+	if (!queryResult.rows[0]) {
+		return res.status(404).json({
+			message:
+				'Technology not found! The tecnologies accepted are JavaScript, Python, React, Express.js, HTML, CSS, Django, PostgreSQL and MongoDB.',
+		});
+	}
+
+	queryConfig = {
+		text: `DELETE FROM projects_technologies WHERE "technologyId" = $1`,
+		values: [techId],
+	};
+
+	await client.query(queryConfig);
+
+	return res.status(204).send();
 };
